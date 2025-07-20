@@ -1,7 +1,7 @@
 const express = require('express');
-const { MongoClient, ObjectId } = require('mongodb');
 const cors = require('cors');
 require('dotenv').config();
+const { connectToDatabase } = require('./lib/mongodb');
 
 // Initialize express app
 const app = express();
@@ -10,40 +10,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection URI - direct connection with fewer options
-const uri = "mongodb+srv://abdulqadeersolutions:fGuzJaVsXmhV0RCV@cluster0.m0nrqlp.mongodb.net/?retryWrites=true&w=majority";
-
-// Global MongoDB client variable - following singleton pattern
-let cachedClient = null;
-let cachedDb = null;
-
-// Simplified connection function for serverless environment
-async function connectToDatabase() {
-  // If we already have a connection, return the cached connection
-  if (cachedClient && cachedDb) {
-    return { client: cachedClient, db: cachedDb };
-  }
-
-  // Create a new MongoDB client - simplified options
-  const client = new MongoClient(uri, {
-    maxPoolSize: 1, // Minimal pooling for serverless
-    serverSelectionTimeoutMS: 5000, // Shorter timeout to fail fast
-    socketTimeoutMS: 30000 // Longer socket timeout for operations
-  });
-
+// Global MongoDB client variable - using the shared connection from lib/mongodb.js
+async function getDatabase() {
   try {
-    // Connect to the MongoDB cluster
-    await client.connect();
-    
-    // Get the database
-    const db = client.db();
-    
-    // Set cache variables
-    cachedClient = client;
-    cachedDb = db;
-    
-    console.log("Connected to MongoDB");
-    return { client, db };
+    const { db } = await connectToDatabase();
+    return db;
   } catch (error) {
     console.error("MongoDB connection error:", error);
     throw error;
@@ -56,7 +27,7 @@ async function connectToDatabase() {
 app.get('/api/articles', async (req, res) => {
   try {
     // Get database connection
-    const { db } = await connectToDatabase();
+    const db = await getDatabase();
     
     // Simple query with default timeout
     const articles = await db.collection('articles')

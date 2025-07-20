@@ -37,9 +37,15 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(article);
   } catch (error) {
     console.error('Error fetching article by formatted title:', error);
+    
+    // Set CORS headers even on error responses
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
     return res.status(500).json({ 
-      error: 'Failed to fetch article', 
-      details: error.message 
+      error: 'Failed to fetch article',
+      details: error.message
     });
   }
 }
